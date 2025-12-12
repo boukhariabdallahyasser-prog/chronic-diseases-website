@@ -1,0 +1,17 @@
+{
+  "name": "dr-boukhatem-chronic-diseases",
+  "version": "1.0.0",
+  "description": "Dr Boukhatem Website - إدارة الأمراض المزمنة",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "latest",
+    "mongoose": "latest",
+    "bcryptjs": "latest",
+    "jsonwebtoken": "latest",
+    "cors": "latest",
+    "socket.io": "latest"
+  }
+}
