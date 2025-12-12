@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr Boukhatem Website</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body { font-family: 'Noto Sans Arabic', sans-serif; background: linear-gradient(135deg, #1e3a8a, #3b82f6); min-height: 100vh; }
+    .glass { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.2); }
+    .card-hover:hover { transform: translateY(-8px); transition: all 0.4s; }
+    .dark-mode { background: linear-gradient(135deg, #0f172a, #1e293b); color: #e2e8f0; }
+    .dark-mode .glass { background: rgba(30, 41, 59, 0.5); }
+  </style>
+</head>
+<body class="text-white">
+  <!-- تسجيل الدخول وتسجيل جديد -->
+  <div id="authPage" class="flex items-center justify-center min-h-screen">
+    <div class="glass p-10 rounded-3xl shadow-2xl w-full max-w-lg">
+      <h1 class="text-4xl font-bold text-center mb-8">Dr Boukhatem Website</h1>
+      <div id="loginForm">
+        <h2 class="text-2xl font-bold mb-6">تسجيل الدخول</h2>
+        <select id="role" class="w-full p-4 mb-4 rounded-xl bg-white/20 border border-white/30">
+          <option value="patient">مريض</option>
+          <option value="doctor">طبيب</option>
+        </select>
+        <input type="text" id="loginId" placeholder="المعرف" class="w-full p-4 mb-4 rounded-xl bg-white/20 border border-white/30" required>
+        <input type="password" id="loginPassword" placeholder="كلمة المرور" class="w-full p-4 mb-6 rounded-xl bg-white/20 border border-white/30" required>
+        <button onclick="login()" class="w-full p-4 bg-blue-600 rounded-xl font-bold hover:bg-blue-700 transition mb-4">تسجيل الدخول</button>
+        <p class="text-center">أو</p>
+        <button onclick="showSignup()" class="w-full p-4 bg-green-600 rounded-xl font-bold hover:bg-green-700 transition mt-4">تسجيل حساب جديد (مريض)</button>
+      </div>
+      <div id="signupForm" class="hidden">
+        <h2 class="text-2xl font-bold mb-6">تسجيل حساب جديد</h2>
+        <input type="text" id="signupId" placeholder="معرف جديد" class="w-full p-4 mb-4 rounded-xl bg-white/20 border border-white/30" required>
+        <input type="text" id="signupName" placeholder="الاسم الكامل" class="w-full p-4 mb-4 rounded-xl bg-white/20 border border-white/30" required>
+        <input type="password" id="signupPassword" placeholder="كلمة المرور" class="w-full p-4 mb-6 rounded-xl bg-white/20 border border-white/30" required>
+        <button onclick="signup()" class="w-full p-4 bg-green-600 rounded-xl font-bold hover:bg-green-700 transition">إنشاء الحساب</button>
+        <button onclick="showLogin()" class="w-full p-4 bg-gray-600 rounded-xl font-bold hover:bg-gray-700 transition mt-4">عودة لتسجيل الدخول</button>
+      </div>
+      <p id="authMsg" class="text-red-300 text-center mt-4"></p>
+    </div>
+  </div>
+
+  <!-- باقي الواجهة (داشبورد وحذف حساب) نفس السابق مع إضافة زر حذف -->
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // الكود الطويل للمنطق (login, signup, delete, etc.) مشابه للسابق مع إضافة signup وdelete
+
+    async function signup() {
+      const id = document.getElementById('signupId').value;
+      const name = document.getElementById('signupName').value;
+      const password = document.getElementById('signupPassword').value;
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password, name })
+      });
+      const data = await res.json();
+      document.getElementById('authMsg').textContent = data.msg || 'تم التسجيل، سجل الدخول';
+    }
+
+    // في داشبورد الطبيب، أضف زر حذف بجانب كل مريض
+    // مثال في renderPatients:
+    // div.innerHTML += `<button onclick="deletePatient('${p.id}')" class="bg-red-600 p-2 rounded">حذف</button>`;
+
+    async function deletePatient(patientId) {
+      if (!confirm('هل أنت متأكد من حذف هذا الحساب؟')) return;
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ patientId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('تم حذف الحساب');
+        loadPatients();
+      }
+    }
+  </script>
+</body>
+</html>
