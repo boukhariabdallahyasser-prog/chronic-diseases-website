@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // نموذج المستخدم
 const userSchema = new mongoose.Schema({
-  role: { type: String, required: true }, // 'doctor' or 'patient'
+  role: { type: String, required: true },
   id: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   name: { type: String, required: true },
@@ -38,6 +38,10 @@ async function seedData() {
     const hashed = await bcrypt.hash('admin123', 12);
     await User.create({ role: 'doctor', id: 'admin', password: hashed, name: 'د. بوخاتم' });
   }
+  if (await User.countDocuments({ id: 'P001' }) === 0) {
+    const hashed = await bcrypt.hash('123456', 12);
+    await User.create({ role: 'patient', id: 'P001', password: hashed, name: 'محمد علي', medicalInfo: 'حالة مستقرة', notifications: [{ message: 'مرحباً بك!' }] });
+  }
 }
 seedData();
 
@@ -56,7 +60,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// تسجيل حساب جديد (للمرضى فقط، من الطبيب أو المريض يسجل نفسه)
+// تسجيل حساب جديد (للمرضى)
 app.post('/api/signup', async (req, res) => {
   const { id, password, name } = req.body;
   try {
@@ -84,8 +88,55 @@ app.post('/api/delete-account', async (req, res) => {
   }
 });
 
-// باقي الـ API (patients, patient-info, update-patient) نفس السابق
+// جلب المرضى (للطبيب)
+app.get('/api/patients', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false });
+  try {
+    const decoded = jwt.verify(token, 'dr_boukhatem_secret_2025');
+    if (decoded.role !== 'doctor') return res.status(403).json({ success: false });
+    const patients = await User.find({ role: 'patient' }).select('id name medicalInfo notifications');
+    res.json({ success: true, patients });
+  } catch (err) {
+    res.status(401).json({ success: false });
+  }
+});
 
+// جلب بيانات المريض
+app.get('/api/patient-info', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false });
+  try {
+    const decoded = jwt.verify(token, 'dr_boukhatem_secret_2025');
+    if (decoded.role !== 'patient') return res.status(403).json({ success: false });
+    const user = await User.findOne({ id: decoded.id });
+    res.json({ success: true, medicalInfo: user.medicalInfo, notifications: user.notifications });
+  } catch (err) {
+    res.status(401).json({ success: false });
+  }
+});
+
+// تحديث المريض
+app.post('/api/update-patient', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false });
+  try {
+    const decoded = jwt.verify(token, 'dr_boukhatem_secret_2025');
+    if (decoded.role !== 'doctor') return res.status(403).json({ success: false });
+    const { patientId, medicalInfo, notification } = req.body;
+    const patient = await User.findOne({ id: patientId });
+    if (!patient) return res.status(404).json({ success: false });
+    if (medicalInfo) patient.medicalInfo = medicalInfo;
+    if (notification) patient.notifications.push({ message: notification });
+    await patient.save();
+    if (notification) io.emit('notification', { patientId, message: notification });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// الواجهة
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -93,4 +144,4 @@ app.get('*', (req, res) => {
 io.on('connection', (socket) => console.log('مستخدم متصل'));
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Dr Boukhatem Website يعمل على ${PORT}`));
+server.listen(PORT, () => console.log(`Dr Boukhatem Website يعمل على المنفذ ${PORT}`));
